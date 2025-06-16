@@ -5,127 +5,139 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>진로 성향 테스트</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 30px;
-      max-width: 800px;
-      margin: auto;
-      background: #f9f9f9;
-    }
-    .question {
-      display: none;
-      margin-bottom: 20px;
-    }
-    .question.active {
-      display: block;
-    }
-    .result {
-      display: none;
-    }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 1em;
-    }
-    textarea {
-      width: 100%;
-      height: 100px;
-      margin-top: 20px;
-    }
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; max-width: 600px; margin: auto; background-color: #f7f7f7; color: #333; }
+    .question { margin-bottom: 20px; }
+    .choices button { display: block; margin: 5px 0; padding: 10px; width: 100%; border: none; background-color: #e0e0e0; cursor: pointer; border-radius: 6px; }
+    .choices button:hover { background-color: #c0c0c0; }
+    .result, .feedback { margin-top: 30px; background-color: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    .hidden { display: none; }
+    .button-group button { margin-right: 10px; padding: 8px 12px; border: none; background-color: #4caf50; color: white; border-radius: 5px; cursor: pointer; }
+    .button-group button:hover { background-color: #388e3c; }
   </style>
 </head>
 <body>
   <h1>진로 성향 테스트</h1>
   <div id="quiz"></div>
-  <button id="next">다음</button>
-
-  <div id="result" class="result">
-    <h2>🎯 테스트 결과 요약</h2>
-    <div id="summary"></div>
-    <h3>🧭 이 결과와 당신은 잘 맞았나요?</h3>
-    <textarea placeholder="당신의 생각을 남겨주세요... (예: 정확했다 / 잘 모르겠다 / 나랑 안 맞는 것 같다 등)"></textarea>
-    <button onclick="alert('의견이 저장되었습니다. 감사합니다!')">의견 제출</button>
+  <div class="result hidden" id="result"></div>
+  <div class="feedback hidden" id="feedback">
+    <p>이 테스트가 유익했나요?</p>
+    <div class="button-group">
+      <button onclick="recordFeedback('yes')">네</button>
+      <button onclick="recordFeedback('no')">아니오</button>
+    </div>
+    <p id="thanksMsg" style="margin-top: 15px;"></p>
   </div>
 
   <script>
     const questions = [
-      {
-        text: "1. 문제를 해결할 때 너의 가장 큰 고민은?",
-        options: [
-          "완벽을 추구하느라 시간이 부족한 것 같다.",
-          "빠르게 결정하지만, 때때로 실수가 신경 쓰인다.",
-          "모두와 잘 지내려다 본인의 의견이 묻힐 때가 있다."
-        ]
-      },
-      {
-        text: "2. 업무를 진행할 때 네가 느끼는 부담감은?",
-        options: [
-          "꼼꼼히 하려다 일이 늦어지는 점이 늘 아쉽다.",
-          "대충 넘어가면 안 된다고 생각하지만 스트레스가 크다.",
-          "사람들과 조율하는 과정에서 감정 소모가 많다."
-        ]
-      },
-      // ... 여기에 3~20번 문항을 questions 배열에 계속 추가 ...
+      "1. 어떤 문제 상황에서…", "2. 복잡한 환경에서…", "3. 협업할 때 네 경향은…", "4. 결정이 필요한 순간…",
+      "5. 여러 선택지 중 하나를 택할 때…", "6. 많은 정보가 들어올 때…", "7. 사람들과 관계를 맺을 때…",
+      "8. 무언가에 집중하려 할 때…", "9. 팀 내 역할이 주어질 때…", "10. 중요한 발표를 앞두었을 때…",
+      "11. 실수가 반복될 때…", "12. 목표가 모호한 일을 맡을 때…", "13. 감정이 앞설 때 네 반응은…",
+      "14. 일정이 빠듯한 프로젝트에서…", "15. 처음 보는 환경에서 적응할 때…", "16. 무기력할 때의 반응은…",
+      "17. 예상과 다른 결과가 나왔을 때…", "18. 계획이 틀어졌을 때…", "19. 새로운 기술을 배울 때…",
+      "20. 다른 사람과 갈등이 생겼을 때…"
     ];
 
-    let current = 0;
+    const options = [
+      ["① 빠르게 해결해보려 하지만 불안감이 생김", "② 잠시 멈추고 상황을 이해하려 하나 마음이 조급함", "③ 다른 사람의 의견을 듣지만 결론을 내리기 어렵다"],
+      ["① 시끄럽지만 일단 처리해보려 함", "② 그냥 내 방식대로 밀고 나감", "③ 다양한 정보를 받아들이지만 머리가 복잡해짐"],
+      ["① 리더로 나서나 내심 부담됨", "② 아이디어는 내지만 실행은 피하고 싶음", "③ 정리하길 원하나 실제로는 흐름에 맡김"],
+      ["① 빠르게 결정하고 후회함", "② 그냥 감으로 정하지만 찝찝함", "③ 미루다 시간이 지나 결정됨"],
+      ["① 고민하다 아무거나 선택함", "② 분석하다가 오히려 불안해짐", "③ 다른 사람이 정해주면 오히려 편함"],
+      ["① 정리하려 하지만 정리가 안 됨", "② 감정에 따라 수용이 달라짐", "③ 멍하게 바라보다가 흘려보냄"],
+      ["① 친해지고 싶지만 피곤함", "② 거리두고 싶지만 죄책감이 듦", "③ 자연스럽게 대하지만 마음은 복잡함"],
+      ["① 빠르게 몰입하지만 금방 지침", "② 환경에 민감하게 반응함", "③ 쉽게 산만해짐"],
+      ["① 정해진 대로 하려다 지루해짐", "② 창의적으로 하려다 충돌함", "③ 그냥 적응하지만 내 의견은 안 냄"],
+      ["① 떨리지만 준비만 하다 시간 지남", "② 발표하나 내심 회피하고 싶음", "③ 남의 눈치 보며 버틴다"],
+      ["① 책임감 느끼지만 짜증남", "② 대충 넘기려다 더 실수함", "③ 회피하고 싶다"],
+      ["① 목표 정하려다 귀찮음", "② 일단 시작하나 중간에 놓침", "③ 아무 생각 없이 하다 방향 잃음"],
+      ["① 감정 폭발 후 후회함", "② 억누르다 병남", "③ 적당히 표현하지만 남 탓함"],
+      ["① 무조건 해보지만 지침", "② 순서대로 하려다 망함", "③ 중간중간 방향이 바뀜"],
+      ["① 무난히 하려다 존재감 없음", "② 튀려다 부담됨", "③ 그냥 그 자리에 있음"],
+      ["① 참고 넘기려다 더 지침", "② 말없이 고립됨", "③ 억지로 텐션 높임"],
+      ["① 다시 해보려 하지만 확신 없음", "② 원인 분석하려다 피로함", "③ 그냥 흘려보냄"],
+      ["① 다시 계획 세우지만 의욕 없음", "② 우선순위 정하다 방향을 잃음", "③ 즉흥적으로 다시 시작함"],
+      ["① 자료만 모으다 끝남", "② 배워보지만 쉽게 포기함", "③ 옆에서 알려줘야 이해됨"],
+      ["① 참다 폭발함", "② 조용히 피함", "③ 무시하거나 타협함"]
+    ];
+
+    let currentQuestion = 0;
     let answers = [];
 
     const quiz = document.getElementById("quiz");
-    const nextBtn = document.getElementById("next");
     const result = document.getElementById("result");
-    const summary = document.getElementById("summary");
+    const feedback = document.getElementById("feedback");
+    const thanksMsg = document.getElementById("thanksMsg");
 
     function showQuestion() {
-      quiz.innerHTML = "";
-      const q = questions[current];
-      const div = document.createElement("div");
-      div.className = "question active";
-
-      const h3 = document.createElement("h3");
-      h3.textContent = q.text;
-      div.appendChild(h3);
-
-      q.options.forEach((opt, index) => {
-        const label = document.createElement("label");
-        label.innerHTML = `<input type='radio' name='q${current}' value='${index + 1}'> ${opt}`;
-        div.appendChild(label);
-        div.appendChild(document.createElement("br"));
-      });
-
-      quiz.appendChild(div);
-    }
-
-    nextBtn.addEventListener("click", () => {
-      const checked = document.querySelector(`input[name='q${current}']:checked`);
-      if (!checked) {
-        alert("답변을 선택해주세요.");
+      if (currentQuestion >= questions.length) {
+        showResult();
         return;
       }
-      answers.push(Number(checked.value));
-      current++;
-      if (current < questions.length) {
-        showQuestion();
-      } else {
-        showResult();
-      }
-    });
+      const q = document.createElement("div");
+      q.className = "question";
+      q.innerHTML = `<h3>${questions[currentQuestion]}</h3>`;
+
+      const choiceDiv = document.createElement("div");
+      choiceDiv.className = "choices";
+      options[currentQuestion].forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.textContent = opt;
+        btn.onclick = () => {
+          answers.push(`${currentQuestion + 1}-${idx + 1}`);
+          quiz.innerHTML = "";
+          currentQuestion++;
+          showQuestion();
+        };
+        choiceDiv.appendChild(btn);
+      });
+      q.appendChild(choiceDiv);
+      quiz.appendChild(q);
+    }
 
     function showResult() {
-      quiz.style.display = "none";
-      nextBtn.style.display = "none";
-      result.style.display = "block";
+      quiz.classList.add("hidden");
+      result.classList.remove("hidden");
+      feedback.classList.remove("hidden");
 
-      let score = answers.reduce((a, b) => a + b, 0);
-      let output = "";
-      if (score <= questions.length * 1.5) {
-        output = `🧠 <b>계획형 현실주의자</b>입니다.<br>신중하며 정확성을 추구하고, 구조화된 정보를 선호합니다.`;
-      } else if (score <= questions.length * 2.2) {
-        output = `🎨 <b>감각 기반 표현자</b>입니다.<br>감정과 감각에 예민하며, 정서적 연결을 중요시합니다.`;
-      } else {
-        output = `🌪 <b>직관적 적응자</b>입니다.<br>즉흥성과 유연성이 뛰어나며, 감정과 논리를 균형 있게 씁니다.`;
-      }
-      summary.innerHTML = output;
+      result.innerHTML = `
+        <h2>🎯 [분석 요약]</h2>
+        <h3>🌟 핵심 역량 및 성향</h3>
+        <table>
+          <tr><th>역량 분야</th><th>경향성</th></tr>
+          <tr><td>문제 해결력</td><td>빠른 실행을 선호하지만, 결과에 대한 불안과 부담이 자주 동반됨 (1-①, 5-②)</td></tr>
+          <tr><td>집중 및 몰입</td><td>다양한 자극을 받아들이려 하지만 피로와 불안이 따라옴 (2-③, 6-①, 7-②, 8-②)</td></tr>
+          <tr><td>협업 태도</td><td>즉흥적 조율에 능하지만, 마음 한 켠에 무거운 책임감과 불안이 있음 (3-②, 9-③)</td></tr>
+          <tr><td>의사결정 방식</td><td>빠른 판단을 하되, 그 후에도 불안과 걱정이 쉽게 사라지지 않음 (4-②, 10-②)</td></tr>
+        </table>
+
+        <h3>🧬 너의 성향 키워드</h3>
+        <ul>
+          <li><strong>불확실성 속 빠른 시도자:</strong> 실행력이 좋지만, 결과에 대한 걱정과 불안이 큼</li>
+          <li><strong>복합 자극 수용자:</strong> 여러 자극을 감당하려 하나 피로와 부담 누적됨</li>
+          <li><strong>감정과 책임 사이 균형자:</strong> 협업과 결정에서 타인을 고려하지만 내면 부담 존재</li>
+        </ul>
+
+        <h3>💼 추천 진로 분야</h3>
+        <ul>
+          <li><strong>프로젝트 매니저</strong> - 빠른 결정과 실행력, 다양한 상황 조율 능력</li>
+          <li><strong>스타트업 운영/창업</strong> - 불확실성 감수, 신속한 조정 역량</li>
+          <li><strong>이벤트 기획/운영</strong> - 다중 요구 처리와 긴장 관리 능력</li>
+          <li><strong>마케팅 및 PR</strong> - 복합 정보 수용과 민첩한 대응력</li>
+        </ul>
+
+        <h3>🔍 조심할 점</h3>
+        <ul>
+          <li>불안과 부담이 커 감정 소모가 많을 수 있음 → 감정 관리 필요</li>
+          <li>실행 후 불안 조절 방법 마련 → 스트레스 누적 방지</li>
+          <li>책임 과중 시, 역할 분담과 지원 요청 적극 활용</li>
+        </ul>
+      `;
+    }
+
+    function recordFeedback(choice) {
+      thanksMsg.textContent = `의견 감사합니다. (${choice === 'yes' ? '유익했음' : '유익하지 않음'})`;
     }
 
     showQuestion();
