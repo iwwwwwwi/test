@@ -29,18 +29,17 @@
   </div>
 
   <script>
-    const questions = [
-      "1. 어떤 문제 상황에서…", "2. 복잡한 환경에서…", "3. 협업할 때 네 경향은…", "4. 결정이 필요한 순간…",
+    const questions = [ "1. 어떤 문제 상황에서…", "2. 복잡한 환경에서…", "3. 협업할 때 네 경향은…", "4. 결정이 필요한 순간…",
       "5. 여러 선택지 중 하나를 택할 때…", "6. 많은 정보가 들어올 때…", "7. 사람들과 관계를 맺을 때…",
       "8. 무언가에 집중하려 할 때…", "9. 팀 내 역할이 주어질 때…", "10. 중요한 발표를 앞두었을 때…",
       "11. 실수가 반복될 때…", "12. 목표가 모호한 일을 맡을 때…", "13. 감정이 앞설 때 네 반응은…",
       "14. 일정이 빠듯한 프로젝트에서…", "15. 처음 보는 환경에서 적응할 때…", "16. 무기력할 때의 반응은…",
       "17. 예상과 다른 결과가 나왔을 때…", "18. 계획이 틀어졌을 때…", "19. 새로운 기술을 배울 때…",
       "20. 다른 사람과 갈등이 생겼을 때…"
+      // 생략: 기존 20개 문항 문자열 그대로 사용
     ];
 
-    const options = [
-      ["① 빠르게 해결해보려 하지만 불안감이 생김", "② 잠시 멈추고 상황을 이해하려 하나 마음이 조급함", "③ 다른 사람의 의견을 듣지만 결론을 내리기 어렵다"],
+    const options = [   ["① 빠르게 해결해보려 하지만 불안감이 생김", "② 잠시 멈추고 상황을 이해하려 하나 마음이 조급함", "③ 다른 사람의 의견을 듣지만 결론을 내리기 어렵다"],
       ["① 시끄럽지만 일단 처리해보려 함", "② 그냥 내 방식대로 밀고 나감", "③ 다양한 정보를 받아들이지만 머리가 복잡해짐"],
       ["① 리더로 나서나 내심 부담됨", "② 아이디어는 내지만 실행은 피하고 싶음", "③ 정리하길 원하나 실제로는 흐름에 맡김"],
       ["① 빠르게 결정하고 후회함", "② 그냥 감으로 정하지만 찝찝함", "③ 미루다 시간이 지나 결정됨"],
@@ -60,10 +59,18 @@
       ["① 다시 계획 세우지만 의욕 없음", "② 우선순위 정하다 방향을 잃음", "③ 즉흥적으로 다시 시작함"],
       ["① 자료만 모으다 끝남", "② 배워보지만 쉽게 포기함", "③ 옆에서 알려줘야 이해됨"],
       ["① 참다 폭발함", "② 조용히 피함", "③ 무시하거나 타협함"]
+      // 생략: 기존 각 문항별 3개 선택지 그대로 사용
     ];
+
+    const traitsMap = {
+      '1-1': '문제해결', '1-2': '자기성찰', '1-3': '우유부단',
+      '2-1': '처리집중', '2-2': '고집', '2-3': '혼란수용',
+      // 모든 문항별 선택지를 고유 성향 키워드로 매핑 (계속 추가)
+    };
 
     let currentQuestion = 0;
     let answers = [];
+    let traitsCount = {};
 
     const quiz = document.getElementById("quiz");
     const result = document.getElementById("result");
@@ -85,7 +92,10 @@
         const btn = document.createElement("button");
         btn.textContent = opt;
         btn.onclick = () => {
-          answers.push(`${currentQuestion + 1}-${idx + 1}`);
+          const key = `${currentQuestion + 1}-${idx + 1}`;
+          answers.push(key);
+          const trait = traitsMap[key];
+          traitsCount[trait] = (traitsCount[trait] || 0) + 1;
           quiz.innerHTML = "";
           currentQuestion++;
           showQuestion();
@@ -101,12 +111,41 @@
       result.classList.remove("hidden");
       feedback.classList.remove("hidden");
 
+      let summary = Object.entries(traitsCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([trait, count]) => `<li><strong>${trait}</strong>: ${count}점</li>`)
+        .join('');
+
+      let recommendation = analyzeTraits();
+
       result.innerHTML = `
         <h2>🎯 테스트 완료</h2>
-        <p>아래는 당신의 답변입니다:</p>
-        <ul>${answers.map(a => `<li>${a}</li>`).join('')}</ul>
-        <p>※ 향후 정확한 분석 알고리즘이 연결되면 이 결과가 분석에 반영됩니다.</p>
+        <p><strong>성향 요약 상위 3개:</strong></p>
+        <ul>${summary}</ul>
+        <hr />
+        <h3>🧭 분석 및 추천</h3>
+        <p>${recommendation}</p>
       `;
+    }
+
+    function analyzeTraits() {
+      // 가장 높은 성향 기준 예시 분석 로직
+      const dominant = Object.entries(traitsCount).sort((a, b) => b[1] - a[1])[0];
+      if (!dominant) return "데이터가 부족합니다.";
+
+      const [key, value] = dominant;
+
+      const analysis = {
+        '문제해결': "문제를 직접 해결하려는 경향이 강하며, 기술 기반 직무나 전략적 사고가 필요한 분야에서 강점을 보일 수 있습니다. 추천: 엔지니어, 기획자, 분석가.",
+        '자기성찰': "깊이 있는 사고를 통해 자기 분석을 자주 하며, 상담, 심리, 교육과 같은 분야에서 적성을 보입니다.",
+        '우유부단': "결정을 미루거나 타인의 의견에 의존하는 경향이 있어, 책임보다는 지원 역할에 더 안정감을 느낄 수 있습니다.",
+        '고집': "자기 방식에 확신이 강하나 유연성이 떨어질 수 있어, 개인 연구나 독립적 프로젝트에 적합합니다.",
+        '혼란수용': "혼란 속에서도 다양한 가능성을 받아들이며 창의성과 융통성이 높습니다. 디자인, 창작, 예술 분야에 적합합니다.",
+        // 다른 키워드도 추가 가능
+      };
+
+      return analysis[key] || "아직 분석 데이터가 준비되지 않았습니다.";
     }
 
     function recordFeedback(choice) {
